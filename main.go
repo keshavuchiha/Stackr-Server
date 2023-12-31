@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"database/sql"
 	"encoding/hex"
@@ -19,9 +20,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type Claims struct {
-	Name string `json:"name"`
-}
 type JWTData struct {
 	jwt.StandardClaims
 	Name string `json:"name"`
@@ -32,7 +30,6 @@ var TOKEN_PRIVATE_KEY []byte
 var PRIVATE_KEY []byte
 var PUBLIC_KEY []byte
 var db *sql.DB
-var err error
 var connStr string
 
 func healthcheck(w http.ResponseWriter, req *http.Request) {
@@ -214,8 +211,8 @@ func authenticate(next http.Handler) http.Handler {
 				panic(err)
 			}
 			decrypted, err := secure.Decrypt(PRIVATE_KEY, nameBytes)
-			fmt.Println(decrypted)
-			
+			decryptedId := uuid.UUID(decrypted)
+			req = req.WithContext(context.WithValue(req.Context(), "user-id", decryptedId))
 		} else {
 			log.Fatal("error in parsing")
 			fmt.Println("error cookie")
