@@ -10,12 +10,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"server/constants"
 	"server/secure"
 	"server/users"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
@@ -33,7 +35,8 @@ var db *sql.DB
 var connStr string
 
 func healthcheck(w http.ResponseWriter, req *http.Request) {
-
+	id := req.Context().Value("user-id")
+	fmt.Println(id)
 	m := map[string]string{
 		"status": "UP",
 	}
@@ -86,11 +89,7 @@ func loginUser(w http.ResponseWriter, req *http.Request) {
 	})
 	tokenString, err := token.SignedString(ed25519.PrivateKey(TOKEN_PRIVATE_KEY))
 	w.Header().Add("content-type", "application/json")
-	http.SetCookie(w, &http.Cookie{
-		Name:    "auth-token",
-		Value:   tokenString,
-		Expires: time.Now().Add(time.Minute * 5),
-	})
+	w.Header().Add(constants.AUTHORIZATION, tokenString)
 	w.WriteHeader(http.StatusOK)
 }
 func registerUser(w http.ResponseWriter, req *http.Request) {
@@ -151,13 +150,14 @@ func registerUser(w http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Println(token)
 	w.Header().Add("content-type", "application/json")
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth-token",
-		Value:    tokenString,
-		Expires:  time.Now().Add(time.Minute * 5),
-		HttpOnly: true,
-		Secure:   true,
-	})
+	w.Header().Add(constants.AUTHORIZATION, tokenString)
+	// http.SetCookie(w, &http.Cookie{
+	// 	Name:     "auth-token",
+	// 	Value:    tokenString,
+	// 	Expires:  time.Now().Add(time.Minute * 5),
+	// 	HttpOnly: true,
+	// 	Secure:   true,
+	// })
 	_, err = json.Marshal(map[string]interface{}{
 		"name":         user.UserName,
 		"email":        user.Email,
@@ -171,29 +171,10 @@ func registerUser(w http.ResponseWriter, req *http.Request) {
 	// w.Write(userBytes)
 }
 
-// func MyMiddleware(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		// create new context from `r` request context, and assign key `"user"`
-// 		// to value of `"123"`
-// 		ctx := context.WithValue(r.Context(), "user", "123")
-
-//			// call the next handler in the chain, passing the response writer and
-//			// the updated request object with the new context value.
-//			//
-//			// note: context.Context values are nested, so any previously set
-//			// values will be accessible as well, and the new `"user"` key
-//			// will be accessible from this point forward.
-//			next.ServeHTTP(w, r.WithContext(ctx))
-//		})
-//	}
-
 func authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		cookie, err := req.Cookie("auth-token")
-		if err != nil {
-			log.Fatal(err)
-		}
-		tokenString := cookie.Value
+
+		tokenString := req.Header.Get(constants.AUTHORIZATION)
 		claims := &JWTData{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			// token.Method.Verify()
@@ -217,7 +198,6 @@ func authenticate(next http.Handler) http.Handler {
 			log.Fatal("error in parsing")
 			fmt.Println("error cookie")
 		}
-		fmt.Println(cookie)
 		next.ServeHTTP(w, req)
 	})
 }
@@ -228,26 +208,19 @@ func main() {
 	TOKEN_PUBLIC_KEY, _ = hex.DecodeString(os.Getenv("TOKEN_PUBLIC_KEY"))
 	TOKEN_PRIVATE_KEY, _ = hex.DecodeString(os.Getenv("TOKEN_PRIVATE_KEY"))
 	PRIVATE_KEY, _ = hex.DecodeString(os.Getenv("PRIVATE_KEY"))
-
-	// text := "Hello world!"
-	// textHex := hex.EncodeToString([]byte(text))
-	// res, err := encrypt(PRIVATE_KEY, []byte(textHex))
-	// fmt.Println(res, err)
-	// decrypted, err := decrypt(PRIVATE_KEY, res)
-	// fmt.Println(string(decrypted), err)
-	// d, _ := hex.DecodeString(string(decrypted))
-	// fmt.Println(string(d))
-	// PRIVATE_KEY, _ = hex.DecodeString(os.Getenv("PRIVATE_KEY"))
-	// privateKey, err := ecdh.P521().GenerateKey(rand.Reader)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("ecdh private key:", hex.EncodeToString(privateKey.Bytes()))
-	// fmt.Println("ecdh public key:", hex.EncodeToString(privateKey.PublicKey().Bytes()))
 	fmt.Println(TOKEN_PRIVATE_KEY, TOKEN_PUBLIC_KEY)
 	r := chi.NewRouter()
-	r.Use(middleware.CleanPath)
 	r.Use(middleware.Logger)
+	r.Use(cors.Handler(cors.Options{
+		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
+		AllowedOrigins: []string{"https://*", "http://*"},
+		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link", "Authorization"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
 	r.Get("/v1/healthcheck", healthcheck)
 	r.Post("/v1/problems/{id}", getProblem)
 	r.Post("/v1/register", registerUser)

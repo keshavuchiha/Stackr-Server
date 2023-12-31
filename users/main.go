@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"server/error_constants"
+	"server/constants"
 
 	"github.com/google/uuid"
 	pq "github.com/lib/pq"
@@ -67,9 +67,9 @@ func (userModal *UserModal) Register(user *User) (uuid.UUID, error) {
 		pqErr, ok := err.(*pq.Error)
 		if ok {
 			if pqErr.Constraint == "unique_name" {
-				return uuid.UUID{}, errors.New(error_constants.UNIQUE_NAME)
+				return uuid.UUID{}, errors.New(constants.UNIQUE_NAME)
 			} else if pqErr.Constraint == "unique_email" {
-				return uuid.UUID{}, errors.New(error_constants.UNIQUE_EMAIL)
+				return uuid.UUID{}, errors.New(constants.UNIQUE_EMAIL)
 			}
 			temp, _ := json.Marshal(pqErr)
 			fmt.Println(string(temp))
