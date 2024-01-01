@@ -230,9 +230,9 @@ func main() {
 	// db.Exec(`delete from users;`)
 	PORT := os.Getenv("PORT")
 	if PORT == "" {
-		PORT = ":8070"
+		PORT = "8070"
 	}
 	fmt.Println(PORT)
-	http.ListenAndServe(PORT, r)
+	http.ListenAndServe(":"+PORT, r)
 
 }
