@@ -209,7 +209,7 @@ func main() {
 	TOKEN_PUBLIC_KEY, _ = hex.DecodeString(os.Getenv("TOKEN_PUBLIC_KEY"))
 	TOKEN_PRIVATE_KEY, _ = hex.DecodeString(os.Getenv("TOKEN_PRIVATE_KEY"))
 	PRIVATE_KEY, _ = hex.DecodeString(os.Getenv("PRIVATE_KEY"))
-	fmt.Println(TOKEN_PRIVATE_KEY, TOKEN_PUBLIC_KEY)
+	// fmt.Println(TOKEN_PRIVATE_KEY, TOKEN_PUBLIC_KEY)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
@@ -232,6 +232,10 @@ func main() {
 		r.Get("/v1/auth", healthcheck)
 	})
 	// db.Exec(`delete from users;`)
-	http.ListenAndServe(":8090", r)
+	PORT := os.Getenv("PORT")
+	if PORT == "" {
+		PORT = ":8070"
+	}
+	http.ListenAndServe(PORT, r)
 
 }
