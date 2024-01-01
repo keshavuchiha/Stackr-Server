@@ -41,7 +41,7 @@ func (userModal *UserModal) Login(user *User) constants.ErrorStruct {
 		}
 	}
 	defer rows.Close()
-	for rows.Next() {
+	if rows.Next() {
 		// user := User{}
 		hashedPassword := ""
 		rows.Scan(&user.ID, &user.UserName, &user.Email, &hashedPassword)
@@ -51,11 +51,14 @@ func (userModal *UserModal) Login(user *User) constants.ErrorStruct {
 				Code:    http.StatusUnauthorized,
 				Message: "Password is incorrect",
 			}
+		} else {
+			return constants.ErrorStruct{}
 		}
 
 	}
 	return constants.ErrorStruct{
-		
+		Code:    http.StatusNotFound,
+		Message: "User Not Found",
 	}
 }
 
