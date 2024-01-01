@@ -18,12 +18,12 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
 type JWTData struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 	Name string `json:"name"`
 }
 
@@ -133,7 +133,7 @@ func registerUser(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	fmt.Println(token.Claims.Valid())
+	// fmt.Println(token.Claims.)
 	if claims, ok := token.Claims.(*JWTData); ok {
 		name := claims.Name
 		fmt.Printf("name: %v\n\n", name)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -14,10 +15,10 @@ var err error
 
 func DB_START() {
 
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	db_host := os.Getenv("DB_HOST")
 	db_port := os.Getenv("DB_PORT")
 	db_user := os.Getenv("DB_USER")
