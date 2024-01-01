@@ -91,6 +91,7 @@ func returnError(errorStruct constants.ErrorStruct, w http.ResponseWriter) {
 	var response constants.Response
 	response.Error = errorStruct
 	responseBytes, _ := json.Marshal(&response)
+	w.Header().Add("content-type", "application/json")
 	w.WriteHeader(errorStruct.Code)
 	w.Write(responseBytes)
 
