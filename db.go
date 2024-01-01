@@ -7,9 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
+
+var err error
 
 func DB_START() {
 
