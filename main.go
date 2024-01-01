@@ -35,6 +35,7 @@ var db *sql.DB
 var connStr string
 
 func healthcheck(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("Healthcheck logs")
 	id := req.Context().Value("user-id")
 	fmt.Println(id)
 	m := map[string]string{
