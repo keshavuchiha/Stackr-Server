@@ -68,109 +68,75 @@ func loginUser(w http.ResponseWriter, req *http.Request) {
 	userModal := &users.UserModal{
 		DB: db,
 	}
-	err := json.NewDecoder(req.Body).Decode(&user)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = userModal.Login(&user)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+	json.NewDecoder(req.Body).Decode(&user)
+	errorStruct := userModal.Login(&user)
+	if errorStruct.Code != 0 {
+		returnError(errorStruct, w)
 		return
 	}
-	userIdEncrypted, err := secure.Encrypt(PRIVATE_KEY, user.ID[:])
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
+	userIdEncrypted, _ := secure.Encrypt(PRIVATE_KEY, user.ID[:])
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &jwt.MapClaims{
 		"name": hex.EncodeToString(userIdEncrypted),
-		"exp":  time.Now().Add(time.Minute * 10).Unix(),
+		"exp":  time.Now().Add(time.Hour * 24).Unix(),
 	})
-	tokenString, err := token.SignedString(ed25519.PrivateKey(TOKEN_PRIVATE_KEY))
+	tokenString, _ := token.SignedString(ed25519.PrivateKey(TOKEN_PRIVATE_KEY))
+	var response constants.Response
 	w.Header().Add("content-type", "application/json")
 	w.Header().Add(constants.AUTHORIZATION, tokenString)
+	responseBytes, _ := json.Marshal(&response)
 	w.WriteHeader(http.StatusOK)
+	w.Write(responseBytes)
+}
+func returnError(errorStruct constants.ErrorStruct, w http.ResponseWriter) {
+	var response constants.Response
+	response.Error = errorStruct
+	responseBytes, _ := json.Marshal(&response)
+	w.WriteHeader(errorStruct.Code)
+	w.Write(responseBytes)
+
 }
 func registerUser(w http.ResponseWriter, req *http.Request) {
+	w.Header().Add("content-type", "application/json")
 	var user users.User
 	userModal := &users.UserModal{
 		DB: db,
 	}
+
 	err := json.NewDecoder(req.Body).Decode(&user)
-	fmt.Println(user)
 	if err != nil {
-		log.Fatal(err)
-	}
-	id, err := userModal.Register(&user)
-	// fmt.Println("iid", id)
-	user.ID = id
-	fmt.Println(user)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		returnError(constants.ErrorStruct{
+			Code:    http.StatusBadRequest,
+			Message: "Request is invalid",
+		}, w)
 		return
 	}
-	fmt.Println("user id", user.ID)
+	errorStruct := userModal.Register(&user)
+	if errorStruct.Code != 0 {
+		returnError(errorStruct, w)
+		return
+	}
+	// fmt.Println("iid", id)
 	userIdEncrypted, err := secure.Encrypt(PRIVATE_KEY, user.ID[:])
 	fmt.Println(err)
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &jwt.MapClaims{
 		"name": hex.EncodeToString(userIdEncrypted),
-		"exp":  time.Now().Add(time.Minute * 10).Unix(),
+		"exp":  time.Now().Add(time.Hour * 24).Unix(),
 	})
 	tokenString, err := token.SignedString(ed25519.PrivateKey(TOKEN_PRIVATE_KEY))
-	fmt.Println(tokenString)
+	// fmt.Println(tokenString)
 	if err != nil {
-		log.Fatalf("err: %v", err)
-	}
-	// claims := jwt.MapClaims{}
-	claims := &JWTData{}
-	token, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		// token.Method.Verify()
-		return ed25519.PublicKey(TOKEN_PUBLIC_KEY), nil
-	})
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		errorStruct.Code = http.StatusUnauthorized
+		errorStruct.Message = err.Error()
+		returnError(errorStruct, w)
 		return
 	}
-	// fmt.Println(token.Claims.)
-	if claims, ok := token.Claims.(*JWTData); ok {
-		name := claims.Name
-		fmt.Printf("name: %v\n\n", name)
-		nameBytes, err := hex.DecodeString(name)
-
-		if err != nil {
-			panic(err)
-		}
-		decrypted, err := secure.Decrypt(PRIVATE_KEY, nameBytes)
-		fmt.Println(uuid.UUID(decrypted))
-
-	} else {
-		log.Fatalf("TOKEN INVALID")
-	}
-	fmt.Println(token)
+	var response constants.Response
 	w.Header().Add("content-type", "application/json")
 	w.Header().Add(constants.AUTHORIZATION, tokenString)
-	// http.SetCookie(w, &http.Cookie{
-	// 	Name:     "auth-token",
-	// 	Value:    tokenString,
-	// 	Expires:  time.Now().Add(time.Minute * 5),
-	// 	HttpOnly: true,
-	// 	Secure:   true,
-	// })
-	_, err = json.Marshal(map[string]interface{}{
-		"name":         user.UserName,
-		"email":        user.Email,
-		"registeredAt": user.RegisteredAt,
-		"password":     user.Password,
-	})
-	if err != nil {
-		panic(err)
-	}
-	w.WriteHeader(http.StatusOK)
+	responseBytes, _ := json.Marshal(&response)
+	w.WriteHeader(http.StatusCreated)
+	w.Write(responseBytes)
+
 	// w.Write(userBytes)
 }
 
@@ -180,11 +146,14 @@ func authenticate(next http.Handler) http.Handler {
 		tokenString := req.Header.Get(constants.AUTHORIZATION)
 		claims := &JWTData{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			// token.Method.Verify()
 			return ed25519.PublicKey(TOKEN_PUBLIC_KEY), nil
 		})
 		if err != nil {
-			log.Fatal(err)
+			returnError(constants.ErrorStruct{
+				Code:    http.StatusUnauthorized,
+				Message: "Session expired",
+			}, w)
+			return
 		}
 		if claims, ok := token.Claims.(*JWTData); ok {
 			fmt.Println("Name", claims.Name)

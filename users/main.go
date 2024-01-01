@@ -2,11 +2,9 @@ package users
 
 import (
 	"database/sql"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"log"
+	"net/http"
 	"server/constants"
+	"server/validations"
 
 	"github.com/google/uuid"
 	pq "github.com/lib/pq"
@@ -26,36 +24,63 @@ type User struct {
 	UpdatedAt    string
 }
 
-func (userModal *UserModal) Login(user *User) error {
+func (userModal *UserModal) Login(user *User) constants.ErrorStruct {
 	query := `SELECT id, username, email, password
-	FROM users WHERE users.username=$1 LIMIT 1;`
-	rows, err := userModal.DB.Query(query, user.UserName)
+	FROM users WHERE users.email=$1 LIMIT 1;`
+	rows, err := userModal.DB.Query(query, user.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("NO USER WITH GIVEN ID")
+			return constants.ErrorStruct{
+				Code:    http.StatusNotFound,
+				Message: "No User with given Email",
+			}
 		}
-		panic(err)
+		return constants.ErrorStruct{
+			Code:    http.StatusInternalServerError,
+			Message: "Internal Server Error",
+		}
 	}
 	defer rows.Close()
-	if rows.Next() {
+	for rows.Next() {
 		// user := User{}
 		hashedPassword := ""
 		rows.Scan(&user.ID, &user.UserName, &user.Email, &hashedPassword)
-		fmt.Println(hashedPassword, user.Password)
 		err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password))
 		if err != nil {
-			return err
+			return constants.ErrorStruct{
+				Code:    http.StatusUnauthorized,
+				Message: "Password is incorrect",
+			}
 		}
-		return nil
+
 	}
-	return errors.New("NO USER IS FOUND")
+	return constants.ErrorStruct{
+		
+	}
 }
 
-func (userModal *UserModal) Register(user *User) (uuid.UUID, error) {
-	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return uuid.UUID{}, err
+func (userModal *UserModal) Register(user *User) constants.ErrorStruct {
+
+	var errorStruct constants.ErrorStruct
+	if len(user.UserName) < 5 {
+		errorStruct.ErrorList = append(errorStruct.ErrorList, "Name too short")
+	} else if len(user.UserName) > 50 {
+		errorStruct.ErrorList = append(errorStruct.ErrorList, "Name too long")
 	}
+	if !validations.IsEmailValid(user.Email) {
+		errorStruct.ErrorList = append(errorStruct.ErrorList, "Email is invalid")
+	}
+	if !validations.IsPasswordValid(user.Password) {
+		errorStruct.ErrorList = append(errorStruct.ErrorList, "Password is invalid")
+	}
+	if len(errorStruct.ErrorList) > 0 {
+		errorStruct.Code = http.StatusBadRequest
+		return errorStruct
+	}
+	passwordBytes, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	// if err != nil {
+	// 	return uuid.UUID{}, err
+	// }
 	user.Password = string(passwordBytes)
 	query := `INSERT INTO public.users
 	(id, username, email, "password", registered_at, updated_at)
@@ -67,28 +92,35 @@ func (userModal *UserModal) Register(user *User) (uuid.UUID, error) {
 		pqErr, ok := err.(*pq.Error)
 		if ok {
 			if pqErr.Constraint == "unique_name" {
-				return uuid.UUID{}, errors.New(constants.UNIQUE_NAME)
+				return constants.ErrorStruct{
+					Code:    409,
+					Message: constants.UNIQUE_NAME,
+				}
 			} else if pqErr.Constraint == "unique_email" {
-				return uuid.UUID{}, errors.New(constants.UNIQUE_EMAIL)
+				return constants.ErrorStruct{
+					Code:    409,
+					Message: constants.UNIQUE_EMAIL,
+				}
 			}
-			temp, _ := json.Marshal(pqErr)
-			fmt.Println(string(temp))
-			fmt.Println(pqErr.Code)
-			fmt.Println(pqErr)
-			fmt.Printf("%+v", pqErr)
-			log.Fatal(pqErr)
+			return constants.ErrorStruct{
+				Code:    400,
+				Message: pqErr.Message,
+			}
 		}
-		log.Fatalf("error in users %v", err)
+		return constants.ErrorStruct{
+			Code:    500,
+			Message: err.Error(),
+		}
 	}
-	id := uuid.UUID{}
+	// id := uuid.UUID{}
 	defer rows.Close()
 	if rows.Next() {
-		id = uuid.UUID{}
-		err = rows.Scan(&id)
-		fmt.Println(id)
+		id := uuid.UUID{}
+		_ = rows.Scan(&id)
+		// fmt.Println(id)
 		user.ID = id
-		fmt.Println("id returned", id)
-		fmt.Println(user)
+		// fmt.Println("id returned", id)
+		// fmt.Println(user)
 	}
-	return id, err
+	return constants.ErrorStruct{}
 }
