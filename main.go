@@ -237,6 +237,7 @@ func main() {
 	if PORT == "" {
 		PORT = ":8070"
 	}
+	fmt.Println(PORT)
 	http.ListenAndServe(PORT, r)
 
 }
