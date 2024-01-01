@@ -231,6 +231,7 @@ func main() {
 		r.Use(authenticate)
 		r.Get("/v1/auth", healthcheck)
 	})
+	fmt.Println("started application")
 	// db.Exec(`delete from users;`)
 	PORT := os.Getenv("PORT")
 	if PORT == "" {
