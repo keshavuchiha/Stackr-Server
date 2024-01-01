@@ -202,6 +202,7 @@ func authenticate(next http.Handler) http.Handler {
 	})
 }
 func main() {
+	fmt.Println("Application starting")
 	DB_START()
 	// fmt.Println(connStr)
 	defer db.Close()
