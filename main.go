@@ -215,6 +215,7 @@ func main() {
 	// 	AllowCredentials: false,
 	// 	MaxAge:           300, // Maximum value not ignored by any of major browsers
 	// }))
+	r.Get("/", healthcheck)
 	r.Get("/v1/healthcheck", healthcheck)
 	// r.Post("/v1/problems/{id}", getProblem)
 	// r.Post("/v1/register", registerUser)
@@ -224,6 +225,7 @@ func main() {
 	// 	r.Use(authenticate)
 	// 	r.Get("/v1/auth", healthcheck)
 	// })
+
 	fmt.Println("started application")
 	// db.Exec(`delete from users;`)
 	PORT := os.Getenv("PORT")
