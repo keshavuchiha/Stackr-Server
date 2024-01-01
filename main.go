@@ -98,6 +98,7 @@ func registerUser(w http.ResponseWriter, req *http.Request) {
 		DB: db,
 	}
 	err := json.NewDecoder(req.Body).Decode(&user)
+	fmt.Println(user)
 	if err != nil {
 		log.Fatal(err)
 	}

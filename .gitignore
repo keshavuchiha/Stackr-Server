@@ -2,3 +2,4 @@
 /golang_server
 db.*
 *.env
+/app
