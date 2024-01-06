@@ -47,6 +47,7 @@ type ProblemFilter struct {
 // 		ans lower(p.title) like %problemFilter% limit offset offset (problemFilter.page-1)*offset`
 // 	}
 // }
+
 // func (problemModal *ProblemModel) Get(id uuid.UUID) {
 // 	query := `select * from problems where id=$1`
 // }

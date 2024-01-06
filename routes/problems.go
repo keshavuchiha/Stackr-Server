@@ -38,3 +38,8 @@ func InsertProblem(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseBytes)
 }
+
+// func ListProblems(w http.ResponseWriter, r http.Request) {
+// 	id := r.Context().Value("user-id")
+// 	w.Header().Add("content-type", "application/json")
+// }

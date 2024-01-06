@@ -19,7 +19,7 @@ func ReturnError(errorStruct ErrorStruct, w http.ResponseWriter) {
 	response.Error = errorStruct
 	responseBytes, _ := json.Marshal(&response)
 	w.Header().Add("content-type", "application/json")
-	w.WriteHeader(errorStruct.Code)
+	// w.WriteHeader(errorStruct.Code)
 	w.Write(responseBytes)
 
 }

@@ -38,7 +38,14 @@ func healthcheck(w http.ResponseWriter, req *http.Request) {
 	}
 	res, err := json.Marshal(m)
 	if err != nil {
-		w.WriteHeader(http.StatusBadGateway)
+		var response constants.Response
+		response.Error = constants.ErrorStruct{
+			Code:    http.StatusBadGateway,
+			Message: "Bad Request",
+		}
+		res, _ = json.Marshal(&response)
+		w.Write(res)
+		// w.WriteHeader(http.StatusBadGateway)
 		return
 	}
 	w.Write([]byte(res))
@@ -70,7 +77,7 @@ func authenticate(next http.Handler) http.Handler {
 		if err != nil {
 			constants.ReturnError(constants.ErrorStruct{
 				Code:    http.StatusUnauthorized,
-				Message: "Session expired",
+				Message: "Session has expired, Please login again",
 			}, w)
 			return
 		}
