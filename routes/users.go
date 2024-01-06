@@ -80,6 +80,9 @@ func LoginUser(w http.ResponseWriter, req *http.Request) {
 	})
 	tokenString, _ := token.SignedString(ed25519.PrivateKey(constants.TOKEN_PRIVATE_KEY))
 	var response constants.Response
+	var userData users.UserData
+	userData.UserName = user.UserName
+	response.Data = userData
 	w.Header().Add("content-type", "application/json")
 	w.Header().Add(constants.AUTHORIZATION, tokenString)
 	responseBytes, _ := json.Marshal(&response)
