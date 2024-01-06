@@ -15,6 +15,10 @@ type UserModal struct {
 	DB *sql.DB
 }
 
+type UserData struct {
+	UserName string `json:"username"`
+}
+
 type User struct {
 	ID           uuid.UUID
 	UserName     string `json:"username,omitempty"`
