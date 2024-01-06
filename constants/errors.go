@@ -6,7 +6,7 @@ import (
 )
 
 const UNIQUE_NAME = "UNIQUE_NAME"
-const UNIQUE_EMAIL = "UNIQUE_EMAIL"
+const UNIQUE_EMAIL = "Email is already taken"
 
 type ErrorStruct struct {
 	Code      int      `json:"code"`

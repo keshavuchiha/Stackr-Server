@@ -105,12 +105,12 @@ func (userModal *UserModal) Register(user *User) constants.ErrorStruct {
 				}
 			} else if pqErr.Constraint == "unique_email" {
 				return constants.ErrorStruct{
-					Code:    409,
+					Code:    401,
 					Message: constants.UNIQUE_EMAIL,
 				}
 			}
 			return constants.ErrorStruct{
-				Code:    400,
+				Code:    401,
 				Message: pqErr.Message,
 			}
 		}
