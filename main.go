@@ -126,14 +126,14 @@ func main() {
 	r.Post("/v1/problems/{id}", getProblem)
 	r.Post("/v1/register", routes.RegisterUser)
 	r.Post("/v1/login", routes.LoginUser)
-
+	r.Get("/v1/problems", routes.GetAllProblems)
 	r.Group(func(r chi.Router) {
 		r.Use(authenticate)
 		r.Get("/v1/auth", healthcheck)
 		r.Post("/v1/submission", routes.CreateSubmission)
 		r.Post("/v1/problem", routes.InsertProblem)
 	})
-
+	
 	fmt.Println("started application")
 	// db.Exec(`delete from users;`)
 	PORT := os.Getenv("PORT")

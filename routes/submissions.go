@@ -1,17 +1,28 @@
 package routes
 
 import (
+	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"server/constants"
+	"server/problems"
 	"server/submissions"
+	"time"
 
 	"github.com/google/uuid"
 )
 
+func DateEqual(date1, date2 time.Time) bool {
+	y1, m1, d1 := date1.Date()
+	y2, m2, d2 := date2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+// func
 func CreateSubmission(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
-	submissonModal := submissions.SubmissionModal{
+	submissionModal := submissions.SubmissionModal{
 		DB: constants.DB,
 	}
 	var body struct {
@@ -44,12 +55,53 @@ func CreateSubmission(w http.ResponseWriter, r *http.Request) {
 	submission.Code = body.Code
 	submission.Language = body.Language
 	submission.Status = "Submitted"
-	errorStruct := submissonModal.Create(&submission)
+	errorStruct := submissionModal.Create(&submission)
 	if errorStruct.Code != 0 {
 		constants.ReturnError(errorStruct, w)
 		return
 	}
 	var response constants.Response
+	// submission.ProblemId
+	//TODO:check for problem of the day
+	//TODO: check for streak
+	rows, _ := submissionModal.DB.Query(`select problem_id from problem_of_the_day where day=CURRENT_DATE;`)
+	potd := uuid.UUID{}
+	if rows.Next() {
+		rows.Scan(&potd)
+	}
+	if potd == submission.ProblemId {
+		// ctx := context.Background()
+		tx, err := submissionModal.DB.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer tx.Rollback()
+		var t time.Time
+		row := tx.QueryRow(`select current_streak,max_streak,last_submitted,CURRENT_TIMESTAMP from streaks where user_id=$1`, submission.UserId)
+
+		streak := problems.Streak{}
+		err = row.Scan(&streak.CurrentStreak, &streak.MaxStreak, &streak.LastSubmitted, &t)
+		if err == sql.ErrNoRows {
+			streak.CurrentStreak = 1
+			streak.MaxStreak = 1
+		} else {
+			if DateEqual(streak.LastSubmitted.Add(time.Hour*24), t) {
+				streak.CurrentStreak++
+				streak.MaxStreak = max(streak.CurrentStreak, streak.MaxStreak)
+			} else {
+				streak.CurrentStreak = 1
+			}
+		}
+
+		streak.LastSubmitted = t
+
+		tx.QueryRow(`update streaks set curent_streak = $1,max_streak=$2,last_submitted=$3 where user_id=$4;`,
+			streak.CurrentStreak, streak.MaxStreak, streak.LastSubmitted, submission.UserId)
+		tx.Commit()
+		// submissionModal.DB
+		// submissionModal.DB.Query(`select user_id,current_streak,max_streak,leas from streaks where user_id=$1`)
+		response.Data = problems.Streak{}
+	}
 	responseBytes, _ := json.Marshal(&response)
 	w.Write(responseBytes)
 }

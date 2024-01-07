@@ -9,6 +9,30 @@ import (
 	"github.com/google/uuid"
 )
 
+func GetAllProblems(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+	problemModal := &problems.ProblemModel{
+		DB: constants.DB,
+	}
+	var problemFilter problems.ProblemFilter
+	err := json.NewDecoder(r.Body).Decode(&problemFilter)
+	if err != nil {
+		constants.ReturnError(constants.ErrorStruct{
+			Code:    http.StatusBadRequest,
+			Message: "Request is invalid",
+		}, w)
+		return
+	}
+	problems, errorStruct := problemModal.GetAll(&problemFilter)
+	if errorStruct.Code != 0 {
+		constants.ReturnError(errorStruct, w)
+		return
+	}
+	var response constants.Response
+	response.Data = problems
+	responseBytes, _ := json.Marshal(&response)
+	w.Write(responseBytes)
+}
 func InsertProblem(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value("user-id")
 	w.Header().Add("content-type", "application/json")
