@@ -16,12 +16,13 @@ type ProblemModel struct {
 }
 type Problem struct {
 	ID          uuid.UUID
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Score       int    `json:"score"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	CreatedBy   uuid.UUID
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Score       int       `json:"score"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedBy   uuid.UUID `json:"created_by"`
+	Companies   []string  `json:"companies,omitempty"`
 }
 
 type Status string
@@ -63,6 +64,7 @@ func (problemModal *ProblemModel) CheckForProblemOfTheDay(tx *sql.Tx) bool {
 	row := tx.QueryRow(`SELECT problem_id
 		FROM public.problem_of_the_day where "day"=CURRENT_DATE;`)
 	err := row.Scan(&constants.ProblemOfTheDay)
+	fmt.Println("Problem of the day", constants.ProblemOfTheDay)
 	return err != sql.ErrNoRows
 }
 
@@ -106,7 +108,6 @@ func (problemModal *ProblemModel) GetAll(problemFilter *ProblemFilter) (*[]AllPr
 		join problem_tags_agg as pta on pta.id=p.id
 		join companies_agg as ca on ca.id=p.id;`
 	rows, err := problemModal.DB.Query(query)
-	defer rows.Close()
 	if err != nil {
 		return nil, constants.ErrorStruct{
 			Code:    400,
@@ -128,9 +129,16 @@ func (problemModal *ProblemModel) GetAll(problemFilter *ProblemFilter) (*[]AllPr
 
 }
 
-// func (problemModal *ProblemModel) Get(id uuid.UUID) {
-// 	query := `select * from problems where id=$1`
-// }
+func (problemModal *ProblemModel) Get(id uuid.UUID) *Problem {
+	fmt.Println(id)
+	row := problemModal.DB.QueryRow(`SELECT id, title, description, created_at, 
+	updated_at, created_by, score
+	FROM public.problems where id=$1 limit 1;`, id)
+	var problem Problem
+	row.Scan(&problem.ID, &problem.Title, &problem.Description,
+		&problem.CreatedAt, &problem.UpdatedAt, &problem.CreatedBy, &problem.Score)
+	return &problem
+}
 
 func (probelmModel *ProblemModel) Insert(problem *Problem) constants.ErrorStruct {
 	query := `INSERT INTO public.problems

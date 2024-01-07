@@ -47,7 +47,7 @@ func (contestModal *ContestModal) AddProblem(conest *Contest, problem *problems.
 			temp, _ := json.Marshal(pqErr)
 			fmt.Println(temp)
 			// log.Fatalf("ERROR IN ADD PROBLEM", pqErr)
-			problemModal := problems.ProblemModel{
+			problemModal := &problems.ProblemModel{
 				DB: contestModal.DB,
 			}
 			problemModal.Insert(problem)
