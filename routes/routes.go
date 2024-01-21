@@ -34,7 +34,7 @@ func getCompanies(limit int) []string {
 	}
 	return result
 }
-func GetCompaniesById(id uuid.UUID) []string {
+func GetCompaniesByProblemId(id uuid.UUID) []string {
 	rows, _ := constants.DB.Query(`select distinct username from company_problems cp 
 join users u on cp.company_id = u.id where cp.problem_id =$1 ;`, id)
 	var result []string
@@ -50,11 +50,8 @@ func GetHome(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	var response constants.Response
 	// constants.DB.Exec()
-	problemModal := &problems.ProblemModel{
-		DB: constants.DB,
-	}
-	problem := problemModal.Get(constants.ProblemOfTheDay)
-	problem.Companies = GetCompaniesById(problem.ID)
+	problem := problems.Get(constants.ProblemOfTheDay)
+	problem.Companies = GetCompaniesByProblemId(problem.ID)
 	response.Data = Home{
 		Companies:       getCompanies(8),
 		ProblemOfTheDay: problem,

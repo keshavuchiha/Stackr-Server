@@ -11,9 +11,6 @@ import (
 
 func GetAllProblems(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
-	problemModal := &problems.ProblemModel{
-		DB: constants.DB,
-	}
 	var problemFilter problems.ProblemFilter
 	err := json.NewDecoder(r.Body).Decode(&problemFilter)
 	if err != nil {
@@ -23,7 +20,7 @@ func GetAllProblems(w http.ResponseWriter, r *http.Request) {
 		}, w)
 		return
 	}
-	problems, errorStruct := problemModal.GetAll(&problemFilter)
+	problems, errorStruct := problems.GetAll(&problemFilter)
 	if errorStruct.Code != 0 {
 		constants.ReturnError(errorStruct, w)
 		return
@@ -34,12 +31,9 @@ func GetAllProblems(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBytes)
 }
 func InsertProblem(w http.ResponseWriter, r *http.Request) {
-	id := r.Context().Value("user-id")
+	id := r.Context().Value(constants.USER_ID)
 	w.Header().Add("content-type", "application/json")
 	var problem problems.Problem
-	problemModal := &problems.ProblemModel{
-		DB: constants.DB,
-	}
 	problem.CreatedBy = id.(uuid.UUID)
 	err := json.NewDecoder(r.Body).Decode(&problem)
 	if err != nil {
@@ -49,7 +43,7 @@ func InsertProblem(w http.ResponseWriter, r *http.Request) {
 		}, w)
 		return
 	}
-	errorStruct := problemModal.Insert(&problem)
+	errorStruct := problems.Insert(&problem)
 	if errorStruct.Code != 0 {
 		constants.ReturnError(errorStruct, w)
 		return

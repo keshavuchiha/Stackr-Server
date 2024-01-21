@@ -12,7 +12,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func DB_START() {
+func DbStart() {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -35,10 +35,9 @@ func DB_START() {
 		log.Fatal(err)
 	}
 	defer tx.Rollback()
-	var problemModal problems.ProblemModel
-	if !problemModal.CheckForProblemOfTheDay(tx) {
-		fmt.Println("Adding Problem of the day")
-		problemModal.AddProblemOfTheDay(tx)
+	if !problems.CheckForProblemOfTheDay(tx) {
+		log.Println("Adding Problem of the day")
+		problems.AddProblemOfTheDay(tx)
 	}
 	tx.Commit()
 	fmt.Println("Successfully connected to database!")

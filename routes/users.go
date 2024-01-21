@@ -17,9 +17,6 @@ import (
 func RegisterUser(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	var user users.User
-	userModal := &users.UserModal{
-		DB: constants.DB,
-	}
 
 	err := json.NewDecoder(req.Body).Decode(&user)
 	if err != nil {
@@ -29,7 +26,7 @@ func RegisterUser(w http.ResponseWriter, req *http.Request) {
 		}, w)
 		return
 	}
-	errorStruct := userModal.Register(&user)
+	errorStruct := users.Register(&user)
 	if errorStruct.Code != 0 {
 		constants.ReturnError(errorStruct, w)
 		return
@@ -64,11 +61,8 @@ func RegisterUser(w http.ResponseWriter, req *http.Request) {
 
 func LoginUser(w http.ResponseWriter, req *http.Request) {
 	var user users.User
-	userModal := &users.UserModal{
-		DB: constants.DB,
-	}
 	json.NewDecoder(req.Body).Decode(&user)
-	errorStruct := userModal.Login(&user)
+	errorStruct := users.Login(&user)
 	if errorStruct.Code != 0 {
 		constants.ReturnError(errorStruct, w)
 		return

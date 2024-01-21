@@ -11,9 +11,6 @@ import (
 	"github.com/lib/pq"
 )
 
-type ProblemModel struct {
-	DB *sql.DB
-}
 type Problem struct {
 	ID          uuid.UUID
 	Title       string    `json:"title"`
@@ -60,15 +57,15 @@ type Streak struct {
 	LastSubmitted   time.Time
 }
 
-func (problemModal *ProblemModel) CheckForProblemOfTheDay(tx *sql.Tx) bool {
+func CheckForProblemOfTheDay(tx *sql.Tx) bool {
 	row := tx.QueryRow(`SELECT problem_id
 		FROM public.problem_of_the_day where "day"=CURRENT_DATE;`)
 	err := row.Scan(&constants.ProblemOfTheDay)
-	fmt.Println("Problem of the day", constants.ProblemOfTheDay)
+	log.Println("Problem of the day", constants.ProblemOfTheDay)
 	return err != sql.ErrNoRows
 }
 
-func (problemModal *ProblemModel) AddProblemOfTheDay(tx *sql.Tx) {
+func AddProblemOfTheDay(tx *sql.Tx) {
 	rows, err := tx.Query(`select p.id from problems p where p.id not in (SELECT problem_id
 		FROM public.problem_of_the_day) order by random() limit 1;`)
 	// var problemIDs uuid.UUIDs
@@ -92,7 +89,7 @@ func (problemModal *ProblemModel) AddProblemOfTheDay(tx *sql.Tx) {
 		log.Fatal(err)
 	}
 }
-func (problemModal *ProblemModel) GetAll(problemFilter *ProblemFilter) (*[]AllProblems, constants.ErrorStruct) {
+func GetAll(problemFilter *ProblemFilter) (*[]AllProblems, constants.ErrorStruct) {
 	query := `with problem_submissions as (select p.id,
 		(sum(case when s."status"='Accepted' then 1 else 0 end)*1.0)/
 		greatest(sum(case when s."status"!='Compiler Error' then 1 else 0 end),1) as acceptance
@@ -107,7 +104,7 @@ func (problemModal *ProblemModel) GetAll(problemFilter *ProblemFilter) (*[]AllPr
 		join problem_submissions ps on ps.id=p.id
 		join problem_tags_agg as pta on pta.id=p.id
 		join companies_agg as ca on ca.id=p.id;`
-	rows, err := problemModal.DB.Query(query)
+	rows, err := constants.DB.Query(query)
 	if err != nil {
 		return nil, constants.ErrorStruct{
 			Code:    400,
@@ -129,9 +126,9 @@ func (problemModal *ProblemModel) GetAll(problemFilter *ProblemFilter) (*[]AllPr
 
 }
 
-func (problemModal *ProblemModel) Get(id uuid.UUID) *Problem {
+func Get(id uuid.UUID) *Problem {
 	fmt.Println(id)
-	row := problemModal.DB.QueryRow(`SELECT id, title, description, created_at, 
+	row := constants.DB.QueryRow(`SELECT id, title, description, created_at, 
 	updated_at, created_by, score
 	FROM public.problems where id=$1 limit 1;`, id)
 	var problem Problem
@@ -140,11 +137,11 @@ func (problemModal *ProblemModel) Get(id uuid.UUID) *Problem {
 	return &problem
 }
 
-func (probelmModel *ProblemModel) Insert(problem *Problem) constants.ErrorStruct {
+func Insert(problem *Problem) constants.ErrorStruct {
 	query := `INSERT INTO public.problems
 	(id, title, description, score, created_at, updated_at, created_by)
 	VALUES(uuid_generate_v4(), $1, $2,$3, now(), now(), $4);`
-	_, err := probelmModel.DB.Exec(query, problem.Title, problem.Description, problem.Score, problem.CreatedBy)
+	_, err := constants.DB.Exec(query, problem.Title, problem.Description, problem.Score, problem.CreatedBy)
 	if err != nil {
 		pqErr, ok := err.(*pq.Error)
 		if ok {

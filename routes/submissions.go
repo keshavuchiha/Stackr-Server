@@ -30,7 +30,7 @@ func CreateSubmission(w http.ResponseWriter, r *http.Request) {
 		Language  string `json:"language"`
 		Code      string `json:"code"`
 	}
-	userId := r.Context().Value("user-id")
+	userId := r.Context().Value(constants.USER_ID)
 	id := userId.(uuid.UUID)
 
 	var submission submissions.Submission

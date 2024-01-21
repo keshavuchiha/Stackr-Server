@@ -31,7 +31,7 @@ var connStr string
 
 func healthcheck(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("Healthcheck logs")
-	id := req.Context().Value("user-id")
+	id := req.Context().Value(constants.USER_ID)
 	fmt.Println(id)
 	m := map[string]string{
 		"status": "UP",
@@ -91,7 +91,7 @@ func authenticate(next http.Handler) http.Handler {
 			}
 			decrypted, err := secure.Decrypt(constants.PRIVATE_KEY, nameBytes)
 			decryptedId := uuid.UUID(decrypted)
-			req = req.WithContext(context.WithValue(req.Context(), "user-id", decryptedId))
+			req = req.WithContext(context.WithValue(req.Context(), constants.USER_ID, decryptedId))
 		} else {
 			log.Fatal("error in parsing")
 			fmt.Println("error cookie")
@@ -100,8 +100,9 @@ func authenticate(next http.Handler) http.Handler {
 	})
 }
 func main() {
-	fmt.Println("Application starting")
-	DB_START()
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.Println("Application starting")
+	DbStart()
 	// fmt.Println(connStr)
 	defer db.Close()
 	constants.DB = db
@@ -141,7 +142,7 @@ func main() {
 	if PORT == "" {
 		PORT = "8070"
 	}
-	fmt.Println(PORT)
+	log.Println(PORT)
 	http.ListenAndServe(":"+PORT, r)
 
 }

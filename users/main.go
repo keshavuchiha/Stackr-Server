@@ -11,10 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserModal struct {
-	DB *sql.DB
-}
-
 type UserData struct {
 	UserName string `json:"username"`
 }
@@ -28,10 +24,10 @@ type User struct {
 	UpdatedAt    string
 }
 
-func (userModal *UserModal) Login(user *User) constants.ErrorStruct {
+func Login(user *User) constants.ErrorStruct {
 	query := `SELECT id, username, email, password
 	FROM users WHERE users.email=$1 LIMIT 1;`
-	rows, err := userModal.DB.Query(query, user.Email)
+	rows, err := constants.DB.Query(query, user.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return constants.ErrorStruct{
@@ -66,7 +62,7 @@ func (userModal *UserModal) Login(user *User) constants.ErrorStruct {
 	}
 }
 
-func (userModal *UserModal) Register(user *User) constants.ErrorStruct {
+func Register(user *User) constants.ErrorStruct {
 
 	var errorStruct constants.ErrorStruct
 	if len(user.UserName) < 5 {
@@ -92,7 +88,7 @@ func (userModal *UserModal) Register(user *User) constants.ErrorStruct {
 	query := `INSERT INTO public.users
 	(id, username, email, "password", registered_at, updated_at)
 	VALUES(uuid_generate_v4(), $1, $2, $3, now(), now()) RETURNING id;`
-	rows, err := userModal.DB.Query(query, user.UserName, user.Email, user.Password)
+	rows, err := constants.DB.Query(query, user.UserName, user.Email, user.Password)
 	if err != nil {
 		// if err==sql.Err
 		// if err==
